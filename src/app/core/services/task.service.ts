@@ -1,59 +1,86 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, catchError, tap, of, Observable, Subject, exhaustMap, concatMap, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, tap, of, Observable, Subject, exhaustMap, concatMap, switchMap, shareReplay } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Task } from '../../shared/models/task.model';
 import { API_URL } from '../constants/api.constants'
 
 @Injectable({ providedIn: 'root' })
 export class TaskService {
+  // 🔹 Estado
   private tasksSubject = new BehaviorSubject<Task[]>([]);
-  tasks$ = this.tasksSubject.asObservable();
+  readonly tasks$ = this.tasksSubject.asObservable();
 
+  // 🔹 Cache
+  private allTasks$?: Observable<Task[]>;
+
+  // 🔹 Ações
   private addTask$ = new Subject<string>();
   private toggleTask$ = new Subject<number>();
+  private updateTask$ = new Subject<{ id: number; title: string }>();
+  private removeTask$ = new Subject<number>();
   private search$ = new Subject<string>();
 
-
   constructor(private http: HttpClient) {
-    this.loadAll();
+    this.initLoad();
+    this.initSearch();
+    this.initAdd();
+    this.initToggle();
+    this.initUpdate();
+    this.initRemove();
+  }
 
+  // =============================
+  // 🔹 INIT STREAMS
+  // =============================
+
+  private initLoad() {
+    this.getAll()
+      .pipe(tap(tasks => this.tasksSubject.next(tasks)))
+      .subscribe();
+  }
+
+  private initSearch() {
     this.search$
       .pipe(
         switchMap(term => this.searchRequest(term)),
         tap(tasks => this.tasksSubject.next(tasks))
       )
       .subscribe();
+  }
 
+  private initAdd() {
     this.addTask$
       .pipe(
-        exhaustMap(title => {
-          const newTask: Omit<Task, 'id'> = {
+        exhaustMap(title =>
+          this.http.post<Task>(API_URL.TASKS, {
             title,
-            completed: false,
-          };
-
-          return this.http.post<Task>(API_URL.TASKS, newTask);
-        }),
+            completed: false
+          })
+        ),
         tap(task => {
+          this.invalidateCache();
           this.tasksSubject.next([...this.tasksSubject.value, task]);
         })
       )
       .subscribe();
+  }
 
+  private initToggle() {
     this.toggleTask$
       .pipe(
         concatMap(id => {
           const task = this.tasksSubject.value.find(t => t.id === id);
           if (!task) return of(null);
 
-          return this.http.put<Task>(`${API_URL}/${id}`, {
+          return this.http.put<Task>(`${API_URL.TASKS}/${id}`, {
             ...task,
-            completed: !task.completed,
+            completed: !task.completed
           });
         }),
         tap(updated => {
           if (!updated) return;
 
+          this.invalidateCache();
           this.tasksSubject.next(
             this.tasksSubject.value.map(t =>
               t.id === updated.id ? updated : t
@@ -63,112 +90,96 @@ export class TaskService {
       )
       .subscribe();
   }
-  private searchRequest(term: string): Observable<Task[]> {
-    if (!term.trim()) {
-      return this.getAll();
+
+  private initUpdate() {
+    this.updateTask$
+      .pipe(
+        concatMap(({ id, title }) => {
+          const task = this.tasksSubject.value.find(t => t.id === id);
+          if (!task) return of(null);
+
+          return this.http.put<Task>(`${API_URL.TASKS}/${id}`, {
+            ...task,
+            title
+          });
+        }),
+        tap(updated => {
+          if (!updated) return;
+
+          this.invalidateCache();
+          this.tasksSubject.next(
+            this.tasksSubject.value.map(t =>
+              t.id === updated.id ? updated : t
+            )
+          );
+        })
+      )
+      .subscribe();
+  }
+
+  private initRemove() {
+    this.removeTask$
+      .pipe(
+        concatMap(id =>
+          this.http.delete(`${API_URL.TASKS}/${id}`).pipe(
+            tap(() => id)
+          )
+        ),
+        tap(id => {
+          this.invalidateCache();
+          this.tasksSubject.next(
+            this.tasksSubject.value.filter(t => t.id !== id)
+          );
+        })
+      )
+      .subscribe();
+  }
+
+  // =============================
+  // 🔹 DATA SOURCES
+  // =============================
+
+  private getAll(): Observable<Task[]> {
+    if (!this.allTasks$) {
+      this.allTasks$ = this.http
+        .get<Task[]>(API_URL.TASKS)
+        .pipe(shareReplay(1));
     }
+    return this.allTasks$;
+  }
+
+  private searchRequest(term: string): Observable<Task[]> {
+    if (!term.trim()) return this.getAll();
 
     const params = new HttpParams().set('q', term);
     return this.http.get<Task[]>(API_URL.TASKS, { params });
   }
 
+  private invalidateCache() {
+    this.allTasks$ = undefined;
+  }
+
+  // =============================
+  // 🔹 PUBLIC API
+  // =============================
+
   search(term: string) {
     this.search$.next(term);
   }
-
-  getAll(): Observable<Task[]> {
-    return this.http.get<Task[]>(API_URL.TASKS);
-  }
-
-  // 🔹 Fonte única
-  private loadAll(): void {
-    this.http.get<Task[]>(API_URL.TASKS).pipe(
-      tap(tasks => this.tasksSubject.next(tasks)),
-      catchError(err => {
-        console.error('Erro ao carregar tasks', err);
-        this.tasksSubject.next([]);
-        return of([]);
-      })
-    ).subscribe();
-  }
-
-  // addTask(title: string): void {
-  //   const newTask: Omit<Task, 'id'> = {
-  //     title,
-  //     completed: false,
-  //   };
-
-  //   this.http.post<Task>(API_URL.TASKS, newTask).pipe(
-  //     tap(task =>
-  //       this.tasksSubject.next([...this.tasksSubject.value, task])
-  //     )
-  //   ).subscribe();
-  // }
 
   addTask(title: string) {
     this.addTask$.next(title);
   }
 
-
-
-  updateTask(id: number, title: string): void {
-    const task = this.tasksSubject.value.find(t => t.id === id);
-    if (!task) return;
-
-    this.http.put<Task>(`${API_URL.TASKS}/${id}`, {
-      ...task,
-      title
-    }).pipe(
-      tap(updated =>
-        this.tasksSubject.next(
-          this.tasksSubject.value.map(t =>
-            t.id === id ? updated : t
-          )
-        )
-      )
-    ).subscribe();
-  }
-
-  // toggleTask(id: number): void {
-  //   const task = this.tasksSubject.value.find(t => t.id === id);
-  //   if (!task) return;
-
-  //   this.http.put<Task>(`${API_URL.TASKS}/${id}`, {
-  //     ...task,
-  //     completed: !task.completed,
-  //   }).pipe(
-  //     tap(updated =>
-  //       this.tasksSubject.next(
-  //         this.tasksSubject.value.map(t =>
-  //           t.id === id ? updated : t
-  //         )
-  //       )
-  //     )
-  //   ).subscribe();
-  // }
-
   toggleTask(id: number) {
     this.toggleTask$.next(id);
   }
 
-  removeTask(id: number): void {
-    this.http.delete(`${API_URL.TASKS}/${id}`).pipe(
-      tap(() =>
-        this.tasksSubject.next(
-          this.tasksSubject.value.filter(t => t.id !== id)
-        )
-      )
-    ).subscribe();
+  updateTask(id: number, title: string) {
+    this.updateTask$.next({ id, title });
   }
 
-  // 🔹 SEARCH integrado ao estado
-  // search(term: string): void {
-  //   const params = term.trim()
-  //     ? new HttpParams().set('q', term)
-  //     : undefined;
-
-  //   this.http.get<Task[]>(API_URL.TASKS, { params }).pipe(
-  //     tap(tasks => this.tasksSubject.next(tasks))
-  //   ).subscribe();
-  // }
+  removeTask(id: number) {
+    this.removeTask$.next(id);
+  }
 }
