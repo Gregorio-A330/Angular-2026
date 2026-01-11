@@ -2,20 +2,21 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { ErrorService } from '../services/error.service';
+import { ERROR_MESSAGES } from '../constants/error-messages';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const errorService = inject(ErrorService);
 
   return next(req).pipe(
     catchError(error => {
-      let message = 'Erro inesperado';
+      let message = ERROR_MESSAGES.UNKNOWN;;
 
       if (error.status === 0) {
-        message = 'Erro de conexão com o servidor';
+        message = ERROR_MESSAGES.CONNECTION;
       } else if (error.status >= 400 && error.status < 500) {
-        message = 'Erro na requisição';
+        message = ERROR_MESSAGES.CLIENT;
       } else if (error.status >= 500) {
-        message = 'Erro interno do servidor';
+        message = ERROR_MESSAGES.SERVER;
       }
 
       errorService.show(message);

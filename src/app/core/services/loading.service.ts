@@ -7,10 +7,10 @@ export class LoadingService {
   loading$ = this.loadingSubject.asObservable();
 
   show() {
-    this.loadingSubject.next(true);
+    queueMicrotask(() => this.loadingSubject.next(true));
   }
 
   hide() {
-    this.loadingSubject.next(false);
+    queueMicrotask(() => this.loadingSubject.next(false));
   }
 }

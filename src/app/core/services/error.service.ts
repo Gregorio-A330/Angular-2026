@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ErrorService {
-  private errorSubject = new Subject<string>();
+  private errorSubject = new BehaviorSubject<string | null>(null);
   error$ = this.errorSubject.asObservable();
 
   show(message: string) {
@@ -11,11 +11,7 @@ export class ErrorService {
   }
 
   clear() {
-    this.errorSubject.next('');
+    this.errorSubject.next(null);
   }
 
-  //Erro é evento
-  //Não é persistente
-  //Não reaparece ao trocar de tela
-  //por isso subject 
 }

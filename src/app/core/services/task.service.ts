@@ -26,6 +26,8 @@ export class TaskService {
         })
       )
       .subscribe();
+      console.log(this.tasks$);
+      
   }
 
   addTask(title: string) {

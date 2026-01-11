@@ -2,8 +2,12 @@
   Carregando...
 </div>
 
-<div *ngIf="error$ | async" class="error">
+<!-- <div *ngIf="error$ | async" class="error">
   {{ error$ | async }}
+</div> -->
+
+<div *ngIf="error$ | async; let error" class="error">
+  ⚠️ {{ error || ''}}
 </div>
 
 <router-outlet></router-outlet>

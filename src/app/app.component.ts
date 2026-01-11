@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 export class AppComponent {
   title = 'angular-task-manager';
   loading$!: Observable<boolean>;
-  error$!: Observable<string>;
+  error$!: Observable<string | null>;
 
   constructor(
     private loadingService: LoadingService,
