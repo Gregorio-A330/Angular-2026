@@ -1,1 +1,9 @@
-<router-outlet></router-outlet>
+@if (loading$ | async) {
+  <div class="loading">Carregando...</div>
+}
+
+<div *ngIf="error$ | async as error" class="error">
+  {{ error }}
+</div>
+
+<router-outlet />
