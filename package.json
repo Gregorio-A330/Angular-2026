@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:angular-task-manager": "node dist/angular-task-manager/server/server.mjs"
+    "serve:ssr:angular-task-manager": "node dist/angular-task-manager/server/server.mjs",
+    "backend": "json-server --watch db.json --port 3000"
   },
   "private": true,
   "dependencies": {
