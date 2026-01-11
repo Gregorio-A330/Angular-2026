@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TaskService } from '../../core/services/task.service';
 import { debounceTime, distinctUntilChanged, Observable, switchMap } from 'rxjs';
@@ -10,6 +10,7 @@ import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './tasks.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 
 export class TasksComponent {
@@ -17,15 +18,10 @@ export class TasksComponent {
   // !	Definite Assignment
   // ?	Pode ser undefined
   // =	Inicialização imediata
-  // tasks$!: Observable<Task[]>;
+  tasks$!: Observable<Task[]>;
 
   searchControl = new FormControl('');
 
-  tasks$ = this.searchControl.valueChanges.pipe(
-    debounceTime(300),
-    distinctUntilChanged(),
-    switchMap(term => this.taskService.search(term ?? ''))
-  );
 
   taskForm = new FormGroup({
     title: new FormControl('', [
@@ -43,28 +39,47 @@ export class TasksComponent {
   }
 
 
-  addTask() {
-    if (this.taskForm.invalid) {
-      return;
-    }
+  ngOnInit() {
+    this.searchControl.valueChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(term =>
+      this.taskService.search(term ?? '')
+    );
+  }
 
-    const title = this.taskForm.value.title!;
+  // addTask() {
+  //   if (this.taskForm.invalid) {
+  //     return;
+  //   }
+
+  //   const title = this.taskForm.value.title!;
+  //   this.taskService.addTask(title);
+  //   this.taskForm.reset();
+  // }
+
+  addTask(title: string) {
+    if (!title.trim()) return;
     this.taskService.addTask(title);
-    this.taskForm.reset();
   }
 
-  toggleTask(id: number) {
-    this.taskService.toggleTask(id);
+  toggle(task: Task) {
+    this.taskService.toggleTask(task.id);
   }
 
-  removeTask(id: number) {
-    this.taskService.removeTask(id);
+  remove(task: Task) {
+    this.taskService.removeTask(task.id);
+  }
+
+  trackById(_: number, task: Task) {
+    return task.id;
   }
 
   startEdit(task: Task) {
     this.editingTaskId = task.id;
     this.editedTitle = task.title;
   }
+
 
   saveEdit(taskId: number) {
     if (this.editedTitle.trim().length < 3) {
