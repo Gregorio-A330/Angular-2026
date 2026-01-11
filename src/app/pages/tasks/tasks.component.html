@@ -1,50 +1,36 @@
 <h2>Tasks</h2>
-<!-- <form [formGroup]="taskForm" (ngSubmit)="addTask()">
-  <input type="text" placeholder="Nova tarefa" formControlName="title" />
-  <div *ngIf="taskForm.controls.title.touched && taskForm.controls.title.invalid">
-    <small *ngIf="taskForm.controls.title.errors?.['required']">
-      O título é obrigatório
-    </small>
-
-    <small *ngIf="taskForm.controls.title.errors?.['minlength']">
-      Mínimo de 3 caracteres
-    </small>
-  </div>
-
-  <button type="submit" [disabled]="taskForm.invalid">
-    Adicionar
-  </button>
-</form>
-
-<ul>
-  <li *ngFor="let task of tasks$ | async">
-    <span *ngIf="editingTaskId !== task.id"
-      (dblclick)="startEdit(task)"
-      [style.text-decoration]="task.completed ? 'line-through' : 'none'">
-  {{ task.title }}
-</span>
-
-<input
-  *ngIf="editingTaskId === task.id"
-  [(ngModel)]="editedTitle"
-  (blur)="saveEdit(task.id)"
-  (keyup.enter)="saveEdit(task.id)"
-/>
-
-    <button (click)="removeTask(task.id)">🗑</button>
-  </li>
-</ul> -->
 
 <section class="tasks">
 
+  <!-- ADD TASK FORM -->
+  <form (ngSubmit)="addTask()" [formGroup]="addTaskForm">
+    <input
+      type="text"
+      placeholder="Nova tarefa"
+      formControlName="title"
+    />
+
+    <small *ngIf="addTaskForm.controls.title.touched &&
+                  addTaskForm.controls.title.invalid">
+      Mínimo de 3 caracteres
+    </small>
+
+    <button type="submit" [disabled]="addTaskForm.invalid">
+      Adicionar
+    </button>
+  </form>
+
+  <!-- SEARCH -->
   <input
-    #taskInput
-    placeholder="Nova tarefa"
-    (keyup.enter)="addTask(taskInput.value); taskInput.value = ''"
+    type="text"
+    placeholder="Buscar tarefas"
+    [formControl]="searchControl"
   />
 
+  <!-- TASK LIST -->
   <ul>
     <li *ngFor="let task of tasks$ | async; trackBy: trackById">
+
       <input
         type="checkbox"
         [checked]="task.completed"
@@ -55,7 +41,8 @@
         {{ task.title }}
       </span>
 
-      <button (click)="remove(task)">X</button>
+      <button (click)="remove(task)">🗑</button>
+
     </li>
   </ul>
 
