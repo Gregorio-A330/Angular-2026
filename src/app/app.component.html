@@ -1,9 +1,9 @@
-@if (loading$ | async) {
-  <div class="loading">Carregando...</div>
-}
-
-<div *ngIf="error$ | async as error" class="error">
-  {{ error }}
+<div *ngIf="loading$ | async" class="loading">
+  Carregando...
 </div>
 
-<router-outlet />
+<div *ngIf="error$ | async" class="error">
+  {{ error$ | async }}
+</div>
+
+<router-outlet></router-outlet>
