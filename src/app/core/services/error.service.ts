@@ -13,4 +13,9 @@ export class ErrorService {
   clear() {
     this.errorSubject.next('');
   }
+
+  //Erro é evento
+  //Não é persistente
+  //Não reaparece ao trocar de tela
+  //por isso subject 
 }
