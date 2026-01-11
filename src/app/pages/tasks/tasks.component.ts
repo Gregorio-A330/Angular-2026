@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TaskService } from '../../core/services/task.service';
-import { Observable } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Observable, switchMap } from 'rxjs';
 import { Task } from '../../shared/models/task.model';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -17,7 +17,15 @@ export class TasksComponent {
   // !	Definite Assignment
   // ?	Pode ser undefined
   // =	Inicialização imediata
-  tasks$!: Observable<Task[]>;
+  // tasks$!: Observable<Task[]>;
+
+  searchControl = new FormControl('');
+
+  tasks$ = this.searchControl.valueChanges.pipe(
+    debounceTime(300),
+    distinctUntilChanged(),
+    switchMap(term => this.taskService.search(term ?? ''))
+  );
 
   taskForm = new FormGroup({
     title: new FormControl('', [

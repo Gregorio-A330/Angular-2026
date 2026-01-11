@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, catchError, tap, of } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, catchError, tap, of, Observable } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Task } from '../../shared/models/task.model';
+import { API } from '../constants/api.constants'
 
 @Injectable({
   providedIn: 'root',
@@ -26,8 +27,8 @@ export class TaskService {
         })
       )
       .subscribe();
-      console.log(this.tasks$);
-      
+    console.log(this.tasks$);
+
   }
 
   addTask(title: string) {
@@ -95,6 +96,20 @@ export class TaskService {
         )
       )
       .subscribe();
+  }
+
+  getAll(): Observable<Task[]> {
+    return this.http.get<Task[]>(API.TASKS);
+  }
+
+  search(term: string): Observable<Task[]> {
+    if (!term.trim()) {
+      return this.getAll();
+    }
+
+    const params = new HttpParams().set('q', term);
+
+    return this.http.get<Task[]>(API.TASKS, { params });
   }
 
 
